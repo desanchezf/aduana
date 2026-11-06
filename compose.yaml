@@ -1,0 +1,36 @@
+name: aduana
+
+services:
+  aduana:
+    build: .
+    restart: unless-stopped
+    # Optional so that `gen-env` can run before .env exists; the service itself
+    # refuses to start without the required values.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      ADUANA_DATABASE_URL: sqlite:///data/aduana.db
+    # Ollama runs natively on the host. Docker Desktop already defines this name;
+    # the mapping makes it work on plain Docker Engine too.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      # Local only: there is no TLS here. Put an HTTPS proxy in front to expose it.
+      - "127.0.0.1:${ADUANA_PORT:-8080}:8080"
+    volumes:
+      - aduana-data:/data
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/aduana", "healthcheck"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  aduana-data:
